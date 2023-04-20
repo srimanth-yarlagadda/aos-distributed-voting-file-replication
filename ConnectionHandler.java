@@ -13,12 +13,19 @@ public class ConnectionHandler implements Runnable {
     private boolean systemDebug = true;
     private boolean runServerBoolean = true;
 
+    public ConnectionHandler(int port, String serverID) {
+        this.myPort = port;
+        this.serverID = serverID;
+    }
+
+    public ConnectionHandler() {}
+
     public void startServer() {
         long currentThread = Thread.currentThread().getId();
         System.out.println("Thread: \033[1m\033[32m" + currentThread + "\033[0m running Server");
         try {
             serverSocket = new ServerSocket(myPort);
-            System.out.println("Server started: " + serverSocket.getLocalPort());
+            System.out.println("Server started: " + myPort + "/" + serverSocket.getLocalPort());
             // Accept and manage clients
             while (runServerBoolean) {
                 try {
@@ -26,6 +33,7 @@ public class ConnectionHandler implements Runnable {
                     // String clientAddress = receiveClientSocket.getInetAddress().getHostName().toString().split("\\.")[0];
                     // final int clientID = Integer.parseInt(clientAddress.substring(2,4));
                     final PeerHandler peer = new PeerHandler();
+                    peer.assignCommunicationSocket(receiveClientSocket);
                     Thread peerThread = new Thread(peer);
                     peerThread.start();
                 } catch (IOException except) {
@@ -73,17 +81,38 @@ public class ConnectionHandler implements Runnable {
         serverThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                new ConnectionHandler().startServer();
+                new ConnectionHandler(myPort, serverID).startServer();
             }
         });
         serverThread.start();
     }
 
 
+    public void connectTest() {
+        try {
+            Socket peerSocket1 = new Socket("10.176.69.33", 9039);
+            System.out.println(".... connected to parent.");
+            // break;
+        } catch (IOException exc) {
+            // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
+            exc.printStackTrace();
+            System.out.println("retrying connection to parent ....");
+        }
+    }
+
+
     public void run() {
         generateIdentity();
+        System.out.println("Assigned prot : " + myPort);
         server();
         generateIPAddresses();
+        connectTest();
+        try {
+            serverThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         System.out.println("run method of connection");
     }
        
