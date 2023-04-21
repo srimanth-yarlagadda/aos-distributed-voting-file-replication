@@ -10,7 +10,7 @@ public class PeerHandler implements Runnable {
     }
 
     public void run() {
-        System.out.println("peer handler: " + socket);
+        System.out.println("Peer: " + socket.getInetAddress());
     }
     
 }

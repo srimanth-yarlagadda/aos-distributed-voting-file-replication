@@ -25,7 +25,7 @@ public class ConnectionHandler implements Runnable {
         System.out.println("Thread: \033[1m\033[32m" + currentThread + "\033[0m running Server");
         try {
             serverSocket = new ServerSocket(myPort);
-            System.out.println("Server started: " + myPort + "/" + serverSocket.getLocalPort());
+            System.out.println("\033[1m\033[32mServer started: " + serverSocket.getLocalPort() + "\033[0m");
             // Accept and manage clients
             while (runServerBoolean) {
                 try {
@@ -87,16 +87,48 @@ public class ConnectionHandler implements Runnable {
         serverThread.start();
     }
 
+    public void connectController() {
+        Thread controllerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Socket controllerSocket = new Socket("dc10.utdallas.edu", 9100);
+                    System.out.println(".... controller connected");
+                    DataInputStream inCommand = new DataInputStream(controllerSocket.getInputStream());
+                    String s = inCommand.readUTF();
+                    System.out.println("controller says: " + s);
+                    // break;
+                } catch (IOException exc) {
+                    // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
+                    exc.printStackTrace();
+                    System.out.println("retrying connection ....");
+                }
+            }
+        });
+        controllerThread.start();
+    }
 
-    public void connectTest() {
-        try {
-            Socket peerSocket1 = new Socket("10.176.69.33", 9039);
-            System.out.println(".... connected to parent.");
-            // break;
-        } catch (IOException exc) {
-            // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
-            exc.printStackTrace();
-            System.out.println("retrying connection to parent ....");
+
+    public void connectToPeers() {
+        List<String> ips = generateIPAddresses();
+        for (String addr: ips) {
+            String serverIP = addr.split(":")[0];
+            String serverPort = addr.split(":")[1];
+            if (Integer.parseInt(serverIP.substring(2,4)) < Integer.parseInt(serverID.substring(2,4))) {
+                try {
+                    final Socket peerSocket = new Socket(serverIP, Integer.parseInt(serverPort));
+                    PeerHandler peer = new PeerHandler();
+                    peer.assignCommunicationSocket(peerSocket);
+                    Thread peerThread = new Thread(peer);
+                    peerThread.start();
+                    System.out.println(".... connected");
+                    // break;
+                } catch (IOException exc) {
+                    // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
+                    exc.printStackTrace();
+                    System.out.println("retrying connection ....");
+                }
+            }
         }
     }
 
@@ -105,8 +137,9 @@ public class ConnectionHandler implements Runnable {
         generateIdentity();
         System.out.println("Assigned prot : " + myPort);
         server();
-        generateIPAddresses();
-        connectTest();
+        connectController();
+        
+        connectToPeers();
         try {
             serverThread.join();
         } catch (InterruptedException e) {

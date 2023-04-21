@@ -6,3 +6,8 @@ default: clean
 clean:
 	rm -rf Server\$*.class
 	rm -rf Server.class
+
+test:
+	clear
+	javac Controller.java
+	java Controller
