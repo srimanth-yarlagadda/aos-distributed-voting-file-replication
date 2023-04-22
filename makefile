@@ -4,10 +4,9 @@ default: clean
 	java Server
 	
 clean:
-	rm -rf Server\$*.class
-	rm -rf Server.class
+	rm -rf *.class
 
-test:
+controller:
 	clear
 	javac Controller.java
 	java Controller

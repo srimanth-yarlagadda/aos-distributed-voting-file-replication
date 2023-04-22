@@ -17,12 +17,12 @@ public class Controller implements Runnable {
     public Controller(Socket s) {this.socket = s;}
 
     public void run() {
-        System.out.println("go run");
+        // System.out.println("go run");
         try {
             outCommand = new DataOutputStream(socket.getOutputStream());
             String cidString = socket.getInetAddress().getHostName().toString().split("\\.")[0].substring(2,4);
             Integer cid = Integer.parseInt(cidString);
-            System.out.println("peer thread got client: " + cid);
+            System.out.println("Client: " + cid);
             // outCommand.writeUTF("hello");
             commandQueue.put(cid, this.outCommand);
         } catch (IOException exc) {
@@ -54,10 +54,32 @@ public class Controller implements Runnable {
     }
 
     public static void sendCommand(String command) throws IOException {
-        DataOutputStream out =  commandQueue.get(1);
-        out.writeUTF(command);
-        out =  commandQueue.get(2);
-        out.writeUTF(command);
+
+        if (command.split(" ").length != 3) {
+            System.out.println("Illegal command");
+            return;
+        }
+
+        String action = command.split(" ")[0];
+        String inform = command.split(" ")[1];
+        String about = command.split(" ")[2];
+
+        for (int i = 0; i < inform.length(); i++) {
+            DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
+            out.writeUTF(action+" "+about);
+        }
+
+        inform = command.split(" ")[2];
+        about = command.split(" ")[1];
+
+        for (int i = 0; i < inform.length(); i++) {
+            DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
+            out.writeUTF(action+" "+about);
+        }
+
+        
+        // out =  commandQueue.get(2);
+        // out.writeUTF(command);
     }
 
     public static void main(String[] args) throws Exception {
@@ -71,11 +93,14 @@ public class Controller implements Runnable {
         serverThread.start();
 
         Scanner consoleRead = new Scanner(System.in);
-        System.out.println("Command:");
-        String command = consoleRead.nextLine();
-        System.out.println("Got command => " + command);
-        sendCommand(command);
-        consoleRead.close();
+        TimeUnit.SECONDS.sleep(3);
+        while (true) {
+            System.out.println("Command:");
+            String readCommand = consoleRead.nextLine();
+            sendCommand(readCommand);
+            System.out.println("Sent command successfully: " + readCommand);
+        }
+        
 
     }
 
