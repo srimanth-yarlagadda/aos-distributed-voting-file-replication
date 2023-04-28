@@ -53,7 +53,15 @@ public class Controller implements Runnable {
         System.out.println("\n\n\nEnding Server");
     }
 
-    public static void sendCommand(String command) throws IOException {
+    public static void sendUpdate(String inform, String message) throws Exception {
+        String serverAddress = String.format("dc%02d.utdallas.edu", Integer.parseInt(inform));
+        Socket sock = new Socket(serverAddress, 9050);
+        DataOutputStream writeout = new DataOutputStream(sock.getOutputStream());
+        writeout.writeUTF(message);
+        sock.close();
+    }
+
+    public static void sendCommand(String command) throws Exception {
 
         if (command.split(" ").length != 3) {
             System.out.println("Illegal command");
@@ -64,17 +72,28 @@ public class Controller implements Runnable {
         String inform = command.split(" ")[1];
         String about = command.split(" ")[2];
 
-        for (int i = 0; i < inform.length(); i++) {
-            DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
-            out.writeUTF(action+" "+about);
-        }
+        if (action.equals("break")) {
 
-        inform = command.split(" ")[2];
-        about = command.split(" ")[1];
+            for (int i = 0; i < inform.length(); i++) {
+                DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
+                out.writeUTF(action+" "+about);
+            }
 
-        for (int i = 0; i < inform.length(); i++) {
-            DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
-            out.writeUTF(action+" "+about);
+            inform = command.split(" ")[2];
+            about = command.split(" ")[1];
+
+            for (int i = 0; i < inform.length(); i++) {
+                DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
+                out.writeUTF(action+" "+about);
+            }
+
+        } else if (action.equals("merge")) {
+            for (int i = 0; i < inform.length(); i++) {
+                DataOutputStream out =  commandQueue.get(Integer.parseInt(inform.substring(i,i+1)));
+                out.writeUTF(action+" "+about);
+            }
+        } else {
+            sendUpdate(inform, about);
         }
 
         

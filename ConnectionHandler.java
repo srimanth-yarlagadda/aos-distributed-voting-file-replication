@@ -70,6 +70,11 @@ public class ConnectionHandler implements Runnable {
         return new ArrayList<String>(serverList);
     }
 
+    public String generateIPfor(String serverID) {
+        Integer sid = Integer.parseInt(serverID);
+        return String.format("dc%02d.utdallas.edu:%d", sid, 9037 + sid);
+    }
+
     
     public void generateIdentity() {
         try {
@@ -114,11 +119,13 @@ public class ConnectionHandler implements Runnable {
                             if (action.equals("break")) {
                                 // System.out.println("socket list : " + socketMap.toString());
                                 breakPeerConnection(Integer.parseInt(about.substring(i,i+1)));
-                            } else if (action.equals("merge")) {
-                                makePeerConnection("","");
-                            }
+                            } else if (action.equals("merge")) {                               
+                                String nodeDetails = generateIPfor(about.substring(i,i+1));
+                                makePeerConnection(nodeDetails.split(":")[0],nodeDetails.split(":")[1]);
+                            } 
                         }
                         System.out.println("command end");
+                        System.out.println(socketMap);
                     }
                 } catch (IOException exc) {
                     // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
@@ -136,7 +143,7 @@ public class ConnectionHandler implements Runnable {
             System.out.println("Attempting Close: " + socket.getInetAddress());
             socket.close();
         } catch (IOException e) {e.printStackTrace();}
-        // socketMap.put(peerID, null);
+        socketMap.remove(peerID);
     }
 
     public void makePeerConnection(String serverIP, String serverPort) {
