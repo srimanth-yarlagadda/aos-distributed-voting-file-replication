@@ -5,20 +5,25 @@ import java.util.concurrent.*;
 
 public class ConnectionHandler implements Runnable {
 
-    private String serverID;
+    public String serverID;
     private int myPort;
     
     ServerSocket serverSocket;
     public ConcurrentHashMap<Integer, Socket> socketMap;
+    public ConcurrentHashMap<Integer, PeerHandler> peerMap = new ConcurrentHashMap<>();
+    public Server fileServer;
 
     Thread serverThread;
 
     private boolean systemDebug = true;
     private boolean runServerBoolean = true;
 
-    public ConnectionHandler(int port, String serverID) {
+    private ConnectionHandler parentHandler;
+
+    public ConnectionHandler(int port, String serverID, ConnectionHandler handler) {
         this.myPort = port;
         this.serverID = serverID;
+        this.parentHandler = handler;
     }
 
     public ConnectionHandler(ConcurrentHashMap<Integer, Socket> s) {
@@ -39,10 +44,12 @@ public class ConnectionHandler implements Runnable {
                     final Socket receiveClientSocket = serverSocket.accept();
                     String clientAddress = receiveClientSocket.getInetAddress().getHostName().toString().split("\\.")[0];
                     // final int clientID = Integer.parseInt(clientAddress.substring(2,4));
-                    final PeerHandler peer = new PeerHandler();
+                    final PeerHandler peer = new PeerHandler(parentHandler.fileServer);
                     peer.assignCommunicationSocket(receiveClientSocket);
                     // System.out.println("GOTTT: " + clientAddress);
-                    socketMap.put(Integer.parseInt(clientAddress.substring(2,4)), receiveClientSocket);
+                    parentHandler.socketMap.put(Integer.parseInt(clientAddress.substring(2,4)), receiveClientSocket);
+                    parentHandler.peerMap.put(Integer.parseInt(clientAddress.substring(2,4)), peer);
+                    // System.out.println(peerMap);
                     Thread peerThread = new Thread(peer);
                     peerThread.start();
                 } catch (IOException except) {
@@ -92,10 +99,11 @@ public class ConnectionHandler implements Runnable {
     }
 
     public void server() {
+        final ConnectionHandler currentInstance = this;
         serverThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                new ConnectionHandler(myPort, serverID).startServer(socketMap);
+                new ConnectionHandler(myPort, serverID, currentInstance).startServer(socketMap);
             }
         });
         serverThread.start();
@@ -115,7 +123,7 @@ public class ConnectionHandler implements Runnable {
                         String action = s.split(" ")[0];
                         String about = s.split(" ")[1];
                         for (int i = 0; i < about.length(); i++) {
-                            System.out.println(about.substring(i,i+1));
+                            // System.out.println(about.substring(i,i+1));
                             if (action.equals("break")) {
                                 // System.out.println("socket list : " + socketMap.toString());
                                 breakPeerConnection(Integer.parseInt(about.substring(i,i+1)));
@@ -124,8 +132,8 @@ public class ConnectionHandler implements Runnable {
                                 makePeerConnection(nodeDetails.split(":")[0],nodeDetails.split(":")[1]);
                             } 
                         }
-                        System.out.println("command end");
-                        System.out.println(socketMap);
+                        // System.out.println("command end");
+                        // System.out.println(socketMap);
                     }
                 } catch (IOException exc) {
                     // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
@@ -144,16 +152,23 @@ public class ConnectionHandler implements Runnable {
             socket.close();
         } catch (IOException e) {e.printStackTrace();}
         socketMap.remove(peerID);
+        peerMap.remove(peerID);
     }
 
     public void makePeerConnection(String serverIP, String serverPort) {
         try {
             final Socket peerSocket = new Socket(serverIP, Integer.parseInt(serverPort));
-            PeerHandler peer = new PeerHandler();
+            PeerHandler peer = new PeerHandler(fileServer);
             peer.assignCommunicationSocket(peerSocket);
             Thread peerThread = new Thread(peer);
             peerThread.start();
             socketMap.put(Integer.parseInt(serverIP.substring(2,4)), peerSocket);
+            peerMap.put(Integer.parseInt(serverIP.substring(2,4)), peer);
+            // System.out.println(peerMap);
+            if (fileServer.getDSstatus()) {
+                try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {}
+                peer.askToUpdate(String.format("-%d %d %d " + fileServer.fileData, fileServer.fileStatus.get("VN"), fileServer.fileStatus.get("RU"), fileServer.fileStatus.get("DS")));
+            }
             // System.out.println(".... connected");
         } catch (IOException exc) {
             // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
@@ -176,10 +191,14 @@ public class ConnectionHandler implements Runnable {
 
     public void run() {
         generateIdentity();
-        System.out.println("Assigned prot : " + myPort);
+        System.out.println("Assigned port : " + myPort);
         server();
         connectController();
         
+        fileServer = new Server(this);
+        Thread fileServerThread = new Thread(fileServer);
+        fileServerThread.start();
+
         connectToPeers();
         try {
             serverThread.join();
