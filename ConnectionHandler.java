@@ -119,7 +119,7 @@ public class ConnectionHandler implements Runnable {
                     DataInputStream inCommand = new DataInputStream(controllerSocket.getInputStream());
                     while (true) {
                         String s = inCommand.readUTF();
-                        System.out.println("controller says: " + s);
+                        System.out.println("[INFO] Command: " + s);
                         String action = s.split(" ")[0];
                         String about = s.split(" ")[1];
                         for (int i = 0; i < about.length(); i++) {
@@ -132,7 +132,7 @@ public class ConnectionHandler implements Runnable {
                                 makePeerConnection(nodeDetails.split(":")[0],nodeDetails.split(":")[1]);
                             } 
                         }
-                        // System.out.println("command end");
+                        System.out.println("");
                         // System.out.println(socketMap);
                     }
                 } catch (IOException exc) {
@@ -148,7 +148,7 @@ public class ConnectionHandler implements Runnable {
     public void breakPeerConnection(Integer peerID) {
         Socket socket = socketMap.get(peerID);
         try {
-            System.out.println("Attempting Close: " + socket.getInetAddress());
+            System.out.println("Close: " + socket.getInetAddress());
             socket.close();
         } catch (IOException e) {e.printStackTrace();}
         socketMap.remove(peerID);
@@ -167,7 +167,7 @@ public class ConnectionHandler implements Runnable {
             // System.out.println(peerMap);
             if (fileServer.getDSstatus()) {
                 try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {}
-                peer.askToUpdate(String.format("-%d %d %d " + fileServer.fileData, fileServer.fileStatus.get("VN"), fileServer.fileStatus.get("RU"), fileServer.fileStatus.get("DS")));
+                peer.askToSync(String.format("-%d %d %d " + fileServer.fileData, fileServer.fileStatus.get("VN"), fileServer.fileStatus.get("RU"), fileServer.fileStatus.get("DS")));
             }
             // System.out.println(".... connected");
         } catch (IOException exc) {

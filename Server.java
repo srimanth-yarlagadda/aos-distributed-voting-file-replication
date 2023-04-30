@@ -24,7 +24,10 @@ public class Server implements Runnable {
     }
 
     public void printFileStatus() {
-        System.out.println(String.format("Version: %d, Replicas: %d, Distinguished Site: %d\n"+fileData, fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
+        System.out.println("\033[1m\033[33m");
+        System.out.println(String.format("Version: %d, Replicas: %d, Distinguished Site: %d\nData: "+fileData, 
+            fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
+        System.out.println("\033[0m");
     }
 
     public boolean getDSstatus() {
@@ -47,7 +50,11 @@ public class Server implements Runnable {
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
             fileStatus.put("DS", Collections.min(currentSet));
-            fileData = fileData + " " + message;
+            if (fileData.equals("")) {
+                fileData = message;
+            } else {
+                fileData = fileData + " " + message;
+            }
             // fileUpdateList.add(myID);
             // if (peersInPartition+1 != 8) {
             
@@ -89,7 +96,7 @@ public class Server implements Runnable {
                     String clientAddress = receiveWriterSocket.getInetAddress().getHostName().toString().split("\\.")[0];
                     DataInputStream readIn = new DataInputStream(receiveWriterSocket.getInputStream());
                     String dataReceive = readIn.readUTF();
-                    System.out.println("Got data: " + dataReceive);
+                    // System.out.println("Got data: " + dataReceive);
                     // performUpdate();
                     // PeerHandler peer = handler.peerMap.get(1);
                     // System.out.println(handler.peerMap + " asking to update " + peer);
@@ -113,14 +120,16 @@ public class Server implements Runnable {
 
     public static void main(String[] args) throws Exception {
 
-        InetAddress localAddress = InetAddress.getLocalHost();
-        String serv = localAddress.toString().split("\\.")[0];
-        Integer sid = Integer.parseInt(serv.substring(2,4));
-        try {
-            TimeUnit.MICROSECONDS.sleep(sid);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        // InetAddress localAddress = InetAddress.getLocalHost();
+        // String serv = localAddress.toString().split("\\.")[0];
+        // Integer sid = Integer.parseInt(serv.substring(2,4));
+        // try {
+        //     System.out.println("SLEEP " + sid);
+        //     TimeUnit.SECONDS.sleep(sid);
+        //     TimeUnit.SECONDS.sleep(sid);
+        // } catch (InterruptedException e) {
+        //     e.printStackTrace();
+        // }
 
 
         ConnectionHandler connections = new ConnectionHandler(socketMap);

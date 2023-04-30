@@ -32,14 +32,25 @@ public class PeerHandler implements Runnable {
     public PeerHandler() {}
 
     public void askToSync(String msg) {
-        System.out.println("Function to sync");
+        System.out.println("Sync replica");
+        while (true) {
+            try {
+                TimeUnit.MICROSECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (writeInstance != null) {
+                if (writeInstance.outStream != null) {
+                    break;
+                }
+            }
+        }
         try{
             writeInstance.outStream.writeUTF(msg);
         } catch (IOException ex) {ex.printStackTrace();}
     }
 
     public void askToUpdate(String msg) {
-        // System.out.println("function to update called");
         try{
             writeInstance.outStream.writeUTF(msg);
         } catch (IOException ex) {ex.printStackTrace();}
@@ -73,7 +84,11 @@ public class PeerHandler implements Runnable {
                     parentPeerHandler.fileServer.fileStatus.put("VN", Integer.parseInt(details[0]));
                     parentPeerHandler.fileServer.fileStatus.put("RU", Integer.parseInt(details[1]));
                     parentPeerHandler.fileServer.fileStatus.put("DS", Integer.parseInt(details[2]));
-                    if (parentPeerHandler.fileServer.fileData.equals("")) {details[3]} else {parentPeerHandler.fileServer.fileData += " " + details[3];}
+                    if (parentPeerHandler.fileServer.fileData.equals("")) {
+                        parentPeerHandler.fileServer.fileData = details[3];
+                    } else {
+                        parentPeerHandler.fileServer.fileData += " " + details[3];
+                    }
                 }
                 System.out.println("Update complete: " + parentPeerHandler.fileServer.fileStatus + parentPeerHandler.fileServer.fileData);
                 parentPeerHandler.fileServer.printFileStatus();

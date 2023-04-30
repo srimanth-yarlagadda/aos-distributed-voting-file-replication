@@ -10,6 +10,7 @@ public class Controller implements Runnable {
     private Socket socket;
     private static Thread serverThread;
     private DataOutputStream outCommand;
+    public static Integer totalConnections;
 
     private static ConcurrentHashMap<Integer, DataOutputStream> commandQueue = new ConcurrentHashMap<>(); 
 
@@ -40,6 +41,7 @@ public class Controller implements Runnable {
                     final Socket receiveClientSocket = serverSocket.accept();
                     Thread commandThread = new Thread(new Controller(receiveClientSocket));
                     commandThread.start();
+                    totalConnections++;
                 } catch (IOException except) {
                     break;
                 }
@@ -103,6 +105,8 @@ public class Controller implements Runnable {
 
     public static void main(String[] args) throws Exception {
 
+        totalConnections = 0;
+
         serverThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -112,9 +116,12 @@ public class Controller implements Runnable {
         serverThread.start();
 
         Scanner consoleRead = new Scanner(System.in);
-        TimeUnit.SECONDS.sleep(3);
+        while (totalConnections < 8) {
+            TimeUnit.MICROSECONDS.sleep(1);
+        }
+            
         while (true) {
-            System.out.println("Command:");
+            System.out.println("\033[1m\033[33m\nCommand:\033[0m");
             String readCommand = consoleRead.nextLine();
             sendCommand(readCommand);
             System.out.println("Sent command successfully: " + readCommand);
