@@ -124,7 +124,7 @@ public class Controller implements Runnable {
             System.out.println("\033[1m\033[33m\nCommand:\033[0m");
             String readCommand = consoleRead.nextLine();
             sendCommand(readCommand);
-            System.out.println("Sent command successfully: " + readCommand);
+            // System.out.println("Sent command successfully: " + readCommand);
         }
         
 

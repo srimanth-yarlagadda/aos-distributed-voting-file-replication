@@ -8,7 +8,8 @@ public class Server implements Runnable {
 
     public static ConcurrentHashMap<Integer, Socket> socketMap = new ConcurrentHashMap<>();
     public static HashMap<String, Integer> fileStatus = new HashMap<>();
-    public static ArrayList<Integer> fileUpdateList = new ArrayList<Integer>();
+    public static HashMap<Integer, Integer> fileUpdateWithPeers = new HashMap<>();
+    public static HashMap<Integer, String> fileUpdateLog = new HashMap<>();
     public static String fileData = "";
 
     private ConnectionHandler handler;
@@ -21,13 +22,30 @@ public class Server implements Runnable {
         fileStatus.put("VN",0);
         fileStatus.put("RU",8);
         fileStatus.put("DS",0);
+        for (int i = 1; i <= 8; i++) {
+            fileUpdateWithPeers.put(i,0);
+        }
     }
 
     public void printFileStatus() {
-        System.out.println("\033[1m\033[33m");
+        // System.out.println("\033[1m\033[33m");
+        // System.out.println("\u001B[36m");
+        System.out.println("\033[1;36m");
         System.out.println(String.format("Version: %d, Replicas: %d, Distinguished Site: %d\nData: "+fileData, 
             fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
         System.out.println("\033[0m");
+        // System.out.println("\u001B[0m");
+    }
+
+    public void debugStats() {
+        System.out.println("\033[33m\tINFO");
+        System.out.println("\t"+fileUpdateWithPeers);
+        System.out.println("\t"+fileUpdateLog);
+        System.out.println("\t"+String.format("Version: %d, Replicas: %d, Distinguished Site: %d\nData: "+fileData, 
+            fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
+        // printFileStatus();
+        System.out.println("\033[0m");
+
     }
 
     public boolean getDSstatus() {
@@ -46,34 +64,28 @@ public class Server implements Runnable {
         currentSet.add(myID);
         
         if ((peersInPartition+1) > (fileStatus.get("RU")/2)) {
-        // if (1==1) {
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
             fileStatus.put("DS", Collections.min(currentSet));
+            fileUpdateLog.put(fileStatus.get("VN"), message);
             if (fileData.equals("")) {
                 fileData = message;
             } else {
                 fileData = fileData + " " + message;
             }
-            // fileUpdateList.add(myID);
-            // if (peersInPartition+1 != 8) {
-            
-            // }
-            // System.out.println("begin update: " + fileStatus.get("RU"));
-            // fileUpdateList.add(myID);
             for (Integer p: handler.peerMap.keySet()) {
+                // System.out.println("\tDOING " + p);
                 (handler.peerMap.get(p)).askToUpdate(String.format("%d %d %d " + message, fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
-                fileUpdateList.add(p);
+                fileUpdateWithPeers.put(p, fileStatus.get("VN"));
             }
-            Collections.sort(fileUpdateList);
         } else if (((peersInPartition+1) == (fileStatus.get("RU")/2)) && (currentSet.contains(fileStatus.get("DS")))) {
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
+            fileUpdateLog.put(fileStatus.get("VN"), message);
             fileData = fileData + " " + message;
-            fileUpdateList.add(myID);
             for (Integer p: handler.peerMap.keySet()) {
                 (handler.peerMap.get(p)).askToUpdate(String.format("%d %d %d " + message, fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
-                fileUpdateList.add(p);
+                fileUpdateWithPeers.put(p, fileStatus.get("VN"));
             }
         } else {
             System.out.println("\u001B[31mFile not updated !\u001B[0m");
@@ -96,12 +108,17 @@ public class Server implements Runnable {
                     String clientAddress = receiveWriterSocket.getInetAddress().getHostName().toString().split("\\.")[0];
                     DataInputStream readIn = new DataInputStream(receiveWriterSocket.getInputStream());
                     String dataReceive = readIn.readUTF();
+                    if (dataReceive.equals("debug")) {
+                        debugStats();
+                    } else {
+                        updatePeers(dataReceive);
+                    }
                     // System.out.println("Got data: " + dataReceive);
                     // performUpdate();
                     // PeerHandler peer = handler.peerMap.get(1);
                     // System.out.println(handler.peerMap + " asking to update " + peer);
                     // peer.askToUpdate();
-                    updatePeers(dataReceive);
+                    
                     receiveWriterSocket.close();
                 } catch (IOException except) {
                     break;
