@@ -119,6 +119,7 @@ public class Controller implements Runnable {
         while (totalConnections < 8) {
             TimeUnit.MICROSECONDS.sleep(1);
         }
+        TimeUnit.SECONDS.sleep(2);
             
         while (true) {
             System.out.println("\033[1m\033[33m\nCommand:\033[0m");

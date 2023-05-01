@@ -57,6 +57,33 @@ public class Server implements Runnable {
         return false;
     }
 
+    public void voteCall() {
+        // System.out.println("begin");
+        Integer iHave = fileStatus.get("VN");
+        Integer thisVersion = fileStatus.get("VN");
+        Integer syncWith = -1;
+        for (Integer p: handler.peerMap.keySet()) {
+            Integer vn = (handler.peerMap.get(p)).ping();
+            if (vn > thisVersion) {
+                thisVersion = vn;
+                syncWith = p;
+            }
+        }
+        // System.out.println("fl 1");
+        if (syncWith != -1) {
+            try {
+                (handler.peerMap.get(syncWith)).writeInstance.outStream.writeInt(-10000 - (thisVersion-iHave));
+            } catch (IOException e) {e.printStackTrace();}
+            while (true) {
+                try {
+                    TimeUnit.MICROSECONDS.sleep(1);
+                    if (fileStatus.get("VN") == thisVersion) {break;}
+                } catch (InterruptedException e) {}
+            }
+        }
+        // System.out.println("vc done");
+    }
+
     public void updatePeers(String message) {
         Integer peersInPartition = handler.peerMap.size();
         System.out.println("Total in partition: " + peersInPartition);
@@ -64,6 +91,7 @@ public class Server implements Runnable {
         currentSet.add(myID);
         
         if ((peersInPartition+1) > (fileStatus.get("RU")/2)) {
+            voteCall();
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
             fileStatus.put("DS", Collections.min(currentSet));
@@ -79,6 +107,7 @@ public class Server implements Runnable {
                 fileUpdateWithPeers.put(p, fileStatus.get("VN"));
             }
         } else if (((peersInPartition+1) == (fileStatus.get("RU")/2)) && (currentSet.contains(fileStatus.get("DS")))) {
+            voteCall();
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
             fileUpdateLog.put(fileStatus.get("VN"), message);
