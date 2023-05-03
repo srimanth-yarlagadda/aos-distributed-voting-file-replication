@@ -156,24 +156,28 @@ public class ConnectionHandler implements Runnable {
     }
 
     public void makePeerConnection(String serverIP, String serverPort) {
-        try {
-            final Socket peerSocket = new Socket(serverIP, Integer.parseInt(serverPort));
-            PeerHandler peer = new PeerHandler(fileServer);
-            peer.assignCommunicationSocket(peerSocket);
-            Thread peerThread = new Thread(peer);
-            peerThread.start();
-            socketMap.put(Integer.parseInt(serverIP.substring(2,4)), peerSocket);
-            peerMap.put(Integer.parseInt(serverIP.substring(2,4)), peer);
-            // System.out.println(peerMap);
-            // if (fileServer.getDSstatus()) {
-            //     try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {}
-            //    peer.askToSync(String.format("-%d %d %d " + fileServer.fileData, fileServer.fileStatus.get("VN"), fileServer.fileStatus.get("RU"), fileServer.fileStatus.get("DS")));
-            // }
-            // System.out.println(".... connected");
-        } catch (IOException exc) {
-            // try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
-            exc.printStackTrace();
-            System.out.println("retrying connection ....");
+        Integer tries = 5;
+        while (tries > 0) {
+            try {
+                final Socket peerSocket = new Socket(serverIP, Integer.parseInt(serverPort));
+                PeerHandler peer = new PeerHandler(fileServer);
+                peer.assignCommunicationSocket(peerSocket);
+                Thread peerThread = new Thread(peer);
+                peerThread.start();
+                socketMap.put(Integer.parseInt(serverIP.substring(2,4)), peerSocket);
+                peerMap.put(Integer.parseInt(serverIP.substring(2,4)), peer);
+                tries = 0; break;
+                // System.out.println(peerMap);
+                // if (fileServer.getDSstatus()) {
+                //     try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {}
+                //    peer.askToSync(String.format("-%d %d %d " + fileServer.fileData, fileServer.fileStatus.get("VN"), fileServer.fileStatus.get("RU"), fileServer.fileStatus.get("DS")));
+                // }
+                // System.out.println(".... connected");
+            } catch (IOException exc) {
+                try {TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) {e.printStackTrace();}
+                // exc.printStackTrace();
+                System.out.println("\tretrying connection .... " + serverIP); tries--;
+            }
         }
     }
 

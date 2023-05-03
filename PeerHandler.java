@@ -172,6 +172,7 @@ public class PeerHandler implements Runnable {
                         parentPeerHandler.fileServer.fileStatus.put("DS", Integer.parseInt(details[2]));
                         parentPeerHandler.fileServer.fileStatus.put("VN", Integer.parseInt(details[0]));
                         parentPeerHandler.fileServer.fileUpdateLog.put(Integer.parseInt(details[0]), details[3]);
+                        parentPeerHandler.fileServer.getCurrentPeerSet(true);
                         System.out.println("Update : \033[1m\033[32m" + parentPeerHandler.fileServer.fileStatus + " : " + details[3] + "\033[0m");
                         parentPeerHandler.fileServer.printFileStatus();
                         reads--;

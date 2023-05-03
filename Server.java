@@ -10,7 +10,9 @@ public class Server implements Runnable {
     public static HashMap<String, Integer> fileStatus = new HashMap<>();
     public static HashMap<Integer, Integer> fileUpdateWithPeers = new HashMap<>();
     public static HashMap<Integer, String> fileUpdateLog = new HashMap<>();
+    public static List<Integer> replicasUpdated = new ArrayList<Integer>();
     public static String fileData = "";
+    final public static Integer totalServers = 8;
 
     private ConnectionHandler handler;
     public Integer myID;
@@ -31,7 +33,7 @@ public class Server implements Runnable {
         // System.out.println("\033[1m\033[33m");
         // System.out.println("\u001B[36m");
         System.out.println("\033[1;36m");
-        System.out.println(String.format("Version: %d, Replicas: %d, Distinguished Site: %d\nData: "+fileData, 
+        System.out.println(String.format("VN:\033[0m %d, \033[1;36mRU:\033[0m %d, \033[1;36mDS:\033[0m %d\nData: \033[0m \033[1m"+fileData, 
             fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
         System.out.println("\033[0m");
         // System.out.println("\u001B[0m");
@@ -84,17 +86,30 @@ public class Server implements Runnable {
         // System.out.println("vc done");
     }
 
-    public void updatePeers(String message) {
-        Integer peersInPartition = handler.peerMap.size();
-        System.out.println("Total in partition: " + peersInPartition);
+    public ArrayList<Integer> getCurrentPeerSet(boolean update) {
         ArrayList<Integer> currentSet = new ArrayList<>(handler.peerMap.keySet());
         currentSet.add(myID);
+        if (update) {
+            replicasUpdated = currentSet;
+        }
+        return currentSet;
+    }
+
+    public void updatePeers(String message) {
+        Integer peersInPartition = handler.peerMap.size();
+        // System.out.println("Total in partition: " + peersInPartition);
+        ArrayList<Integer> currentSet = getCurrentPeerSet(false);
         
         if ((peersInPartition+1) > (fileStatus.get("RU")/2)) {
             voteCall();
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
-            fileStatus.put("DS", Collections.min(currentSet));
+            // fileStatus.put("DS", Collections.min(currentSet));
+            if (peersInPartition+1==totalServers) {
+                fileStatus.put("DS", 0);
+            } else {
+                fileStatus.put("DS", Collections.min(currentSet));
+            }
             fileUpdateLog.put(fileStatus.get("VN"), message);
             if (fileData.equals("")) {
                 fileData = message;
@@ -106,7 +121,9 @@ public class Server implements Runnable {
                 (handler.peerMap.get(p)).askToUpdate(String.format("%d %d %d " + message, fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
                 fileUpdateWithPeers.put(p, fileStatus.get("VN"));
             }
-        } else if (((peersInPartition+1) == (fileStatus.get("RU")/2)) && (currentSet.contains(fileStatus.get("DS")))) {
+            replicasUpdated = currentSet;
+        } else if (((peersInPartition+1) == (fileStatus.get("RU")/2)) && (currentSet.contains(Collections.min(replicasUpdated)))) {
+            fileStatus.put("DS", Collections.min(replicasUpdated));
             voteCall();
             fileStatus.put("VN", fileStatus.get("VN") + 1);
             fileStatus.put("RU", peersInPartition+1);
@@ -116,6 +133,7 @@ public class Server implements Runnable {
                 (handler.peerMap.get(p)).askToUpdate(String.format("%d %d %d " + message, fileStatus.get("VN"), fileStatus.get("RU"), fileStatus.get("DS")));
                 fileUpdateWithPeers.put(p, fileStatus.get("VN"));
             }
+            replicasUpdated = currentSet;
         } else {
             System.out.println("\u001B[31mFile not updated !\u001B[0m");
         }
